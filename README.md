@@ -1,7 +1,7 @@
 # NOTE: This project is a work in progress, it is far from complete.
 ## Predicting Employee Attrition
 
-As a former manager, I am inherently interested in personnel questions.  One of the big ones has always been, can you predict who is going to leave?  I came across this attrition dataset kindly provided to the data science community by IBM.  This project is just my personal look at the data, along with model building.
+As a former manager, I am inherently interested in personnel questions.  One of the big ones has always been: can you predict who is going to leave?  I came across this attrition dataset kindly provided to the data science community by IBM.  This project is just my personal look at the data, along with model building.
 
 ### Project Structure
 I do my coding in Python .py files.  However, to provide an explaination, or narration to my work, I am experimenting with including notebooks (.ipynb) files to walk people thru the code.  
