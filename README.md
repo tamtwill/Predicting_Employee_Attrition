@@ -9,6 +9,8 @@ I do my coding in Python .py files.  However, to provide an explaination, or nar
 The project breakdown is:
 1) Attrition_EDA.py - the exploratory data analysis created to give me an overview of the data
   * Explanatory_EDA_Notebook.ipynb - the notebook explaining the thinking behind the EDA
-2) Attrition_models.py - TBD 
+2) Evaluate_models.py - try several different candidate models and compare the RMSE.  Use this to select the model to refine
+  * Explanatory_eval.ipynb - TBD.  Will cover the thinking behind the candidate models and the eval process
+3) Attrition_models.py - TBD 
   * Explanatory_Models.ipynb - TBD once I have the models built
-3) Report_WrapUp - TBD.  I plan to write-up the results of this analysis, just as I'd have to do if this were an actual task at work.
+4) Report_WrapUp - TBD.  I plan to write-up the results of this analysis, just as I'd have to do if this were an actual task at work.
