@@ -17,8 +17,6 @@ import seaborn as sns
 import gc
 
 
-rnd_st = np.random.RandomState(31)
-
 ## see  https://github.com/numpy/numpy/issues/11411 and 
 ## https://stackoverflow.com/questions/53334421/futurewarning-with-distplot-in-seaborn 
 ## for why FutureWarnigns are suppressed
