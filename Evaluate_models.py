@@ -20,10 +20,10 @@ from sklearn.linear_model import LogisticRegression, Ridge, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, BaggingRegressor,\
  AdaBoostRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.naive_bayes import GaussianNB, BernoulliNB
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.naive_bayes import BernoulliNB
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, explained_variance_score, roc_curve
 from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.metrics import roc_curve
+
 
 from matplotlib import pyplot as plt
 
@@ -36,10 +36,12 @@ SET_FIT_INTERCEPT=True
 
 # set the number of folds for cross-validation
 N_FOLDS = 10
-#N_FOLDS = 2
+#N_FOLDS = 1
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning) 
+
+pd.set_option('display.max_columns', 10)
 
 datapath = '~/gitRepo/Predicting_Employee_Attrition/data/'
 outpath = '~/gitRepo/Predicting_Employee_Attrition/output/'
@@ -62,7 +64,7 @@ target = train['has_quit']
 reg_methods = ['LogisiticRegression', 'Ridge', 'Lasso', 
           'ElasticNet', 'BaggingRegressor', 
           'RandomForest', 'AdaBoost','GradientBoosting 1.0','GradientBoosting .1', 
-          'Extra Trees', 'GaussianNB', 'BernoulliNB']
+          'Extra Trees', 'BernoulliNB']
 
 regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT), 
                Ridge(alpha = 1, solver = 'cholesky', 
@@ -91,7 +93,6 @@ regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT),
                ExtraTreesRegressor(n_estimators=100, criterion='mse', max_depth=5, 
                     min_samples_split=2, min_samples_leaf=1, max_features='log2', 
                     bootstrap=True, random_state=RANDOM_SEED),
-               GaussianNB(),
                BernoulliNB(alpha=1.0, binarize=0.0, fit_prior=True, class_prior=None)
               ]
          
@@ -112,8 +113,10 @@ def plot_roc_curve(fpr, tpr, label=None):
 def eval_model(data, labels):   
 
     # array to hold results
-    cross_val_res = np.zeros((N_FOLDS, len(reg_methods)))
+    cross_val_res1 = np.zeros((N_FOLDS, len(reg_methods)))
+    cross_val_res2 = np.zeros((N_FOLDS, len(reg_methods)))
     r2_val_res = np.zeros((N_FOLDS, len(reg_methods)))
+    exp_var_res = np.zeros((N_FOLDS, len(reg_methods)))
     
     # Ten-fold cross-validation with stratified sampling.
     stsp = StratifiedShuffleSplit(n_splits=N_FOLDS)
@@ -135,11 +138,18 @@ def eval_model(data, labels):
             
            r2_val = r2_score(y_test, y_test_predict) 
            print("R-squared is:", r2_val)
-           fold_method_res = np.sqrt(mean_squared_error(y_test, y_test_predict))
+           exp_var = explained_variance_score(y_test, y_test_predict) 
+           print("Explained variance is:", exp_var)
+           fold_method_res1 = mean_absolute_error(y_test, y_test_predict)
+           fold_method_res2 = np.sqrt(mean_squared_error(y_test, y_test_predict))
            print(method.get_params(deep=True))
-           print('Root mean-squared error:', fold_method_res)
-           cross_val_res[fold_index, method_index] = fold_method_res
-           r2_val_res[fold_index, method_index] = r2_val       
+           print('Mean absolute error:', fold_method_res1)
+           print('Root mean-squared error:', fold_method_res2)
+
+           cross_val_res1[fold_index, method_index] = fold_method_res1
+           cross_val_res2[fold_index, method_index] = fold_method_res2
+           r2_val_res[fold_index, method_index] = r2_val    
+           exp_var_res[fold_index, method_index] = exp_var 
           
            fpr, tpr, _ = roc_curve(y_test, y_test_predict)
            plt.figure(figsize=(8, 6))
@@ -151,15 +161,24 @@ def eval_model(data, labels):
        fold_index += 1
        
 
-    cross_val_res_df = pd.DataFrame(cross_val_res)
-    cross_val_res_df.columns = reg_methods
+    cross_val_res1_df = pd.DataFrame(cross_val_res1)
+    cross_val_res1_df.columns = reg_methods
+    
+    cross_val_res2_df = pd.DataFrame(cross_val_res2)
+    cross_val_res2_df.columns = reg_methods
+    
     r2_val_res_df = pd.DataFrame(r2_val_res)
     r2_val_res_df.columns = reg_methods
-
-    res=cross_val_res_df.mean()
-    r2=r2_val_res_df.mean()
     
-    tmp = pd.concat([res, r2], axis=1)   
+    exp_var_res_df = pd.DataFrame(exp_var_res)
+    exp_var_res_df.columns = reg_methods
+
+    res1=cross_val_res1_df.mean()
+    res2=cross_val_res2_df.mean()
+    r2=r2_val_res_df.mean()
+    exp_var=exp_var_res_df.mean()
+    
+    tmp = pd.concat([res1, res2, r2, exp_var], axis=1)   
 
     return tmp
 
@@ -169,8 +188,8 @@ def eval_model(data, labels):
 #**************************************************
 print ("\n\n\n************ PER FOLD REGRESSION RESULTS  ")
 orig_res = eval_model(train_data, target)
-orig_res.columns = ['RMSE', 'R2']
-sorted_res = orig_res.sort_values(by = 'RMSE')
+orig_res.columns = ['MAE', 'RMSE', 'R2', 'Explained Variance']
+sorted_res = orig_res.sort_values(by = 'MAE')
 
 
 
@@ -194,25 +213,25 @@ def get_importance(df, model_name):
     X_train = df.iloc[:, 1:]
     y_train = df.iloc[:, 0]
            
-#    try:
-    #for regress_list[model]:
-    model_num = reg_methods.index(model_name)
-    model = regress_list[model_num]
-    
-    model.fit(X_train,y_train)
-    feature_import = np.round(model.feature_importances_,4)
-    array_stack = np.column_stack([feature_list, feature_import])
-    tmp_array = array_stack[np.argsort(array_stack[:, 1])]
-    print('\n----------------------------------------------')
-    print('Feature importance for method', model, '\n')
-    print(np.array2string(tmp_array).replace('[[',' [').replace(']]',']'))
-#    except:
-#        print("**** !! Best method has no feature importance  !! ****", candidate)
+    try:
+        #for regress_list[model]:
+        model_num = reg_methods.index(model_name)
+        model = regress_list[model_num]
+        
+        model.fit(X_train,y_train)
+        feature_import = np.round(model.feature_importances_,4)
+        array_stack = np.column_stack([feature_list, feature_import])
+        tmp_array = array_stack[np.argsort(array_stack[:, 1])]
+        print('\n----------------------------------------------')
+        print('Feature importance for method', model, '\n')
+        print(np.array2string(tmp_array).replace('[[',' [').replace(']]',']'))
+    except:
+        print("**** !! Best method has no feature importance  !! ****", candidate)
        
 
 print ("\n\n\n************ FEATURE IMPORTANCE ***********************")
 
-# get model with lowest RMSE and find feature importance
+# get model with lowest MAE and find feature importance
 candidate = sorted_res.index[0]
 get_importance(train, candidate)
 
