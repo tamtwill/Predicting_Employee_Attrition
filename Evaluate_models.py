@@ -21,7 +21,7 @@ from sklearn.ensemble import RandomForestRegressor, BaggingRegressor,\
  AdaBoostRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.naive_bayes import BernoulliNB
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, explained_variance_score, roc_curve
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, roc_curve
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
@@ -138,8 +138,6 @@ def eval_model(data, labels):
             
            r2_val = r2_score(y_test, y_test_predict) 
            print("R-squared is:", r2_val)
-           exp_var = explained_variance_score(y_test, y_test_predict) 
-           print("Explained variance is:", exp_var)
            fold_method_res1 = mean_absolute_error(y_test, y_test_predict)
            fold_method_res2 = np.sqrt(mean_squared_error(y_test, y_test_predict))
            print(method.get_params(deep=True))
@@ -149,7 +147,6 @@ def eval_model(data, labels):
            cross_val_res1[fold_index, method_index] = fold_method_res1
            cross_val_res2[fold_index, method_index] = fold_method_res2
            r2_val_res[fold_index, method_index] = r2_val    
-           exp_var_res[fold_index, method_index] = exp_var 
           
            fpr, tpr, _ = roc_curve(y_test, y_test_predict)
            plt.figure(figsize=(8, 6))
@@ -169,16 +166,12 @@ def eval_model(data, labels):
     
     r2_val_res_df = pd.DataFrame(r2_val_res)
     r2_val_res_df.columns = reg_methods
-    
-    exp_var_res_df = pd.DataFrame(exp_var_res)
-    exp_var_res_df.columns = reg_methods
 
     res1=cross_val_res1_df.mean()
     res2=cross_val_res2_df.mean()
     r2=r2_val_res_df.mean()
-    exp_var=exp_var_res_df.mean()
     
-    tmp = pd.concat([res1, res2, r2, exp_var], axis=1)   
+    tmp = pd.concat([res1, res2, r2], axis=1)   
 
     return tmp
 
@@ -188,7 +181,7 @@ def eval_model(data, labels):
 #**************************************************
 print ("\n\n\n************ PER FOLD REGRESSION RESULTS  ")
 orig_res = eval_model(train_data, target)
-orig_res.columns = ['MAE', 'RMSE', 'R2', 'Explained Variance']
+orig_res.columns = ['MAE', 'RMSE', 'R2']
 sorted_res = orig_res.sort_values(by = 'MAE')
 
 
