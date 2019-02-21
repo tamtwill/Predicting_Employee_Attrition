@@ -20,9 +20,11 @@ from sklearn.linear_model import LogisticRegression, Ridge, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, BaggingRegressor,\
  AdaBoostRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, roc_curve
 from sklearn.model_selection import StratifiedShuffleSplit
+from imblearn.over_sampling import SMOTE
 
 
 from matplotlib import pyplot as plt
@@ -64,7 +66,7 @@ target = train['has_quit']
 reg_methods = ['LogisiticRegression', 'Ridge', 'Lasso', 
           'ElasticNet', 'BaggingRegressor', 
           'RandomForest', 'AdaBoost','GradientBoosting 1.0','GradientBoosting .1', 
-          'Extra Trees', 'BernoulliNB']
+          'Extra Trees', 'BernoulliNB', 'SVM']
 
 regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT), 
                Ridge(alpha = 1, solver = 'cholesky', 
@@ -93,7 +95,10 @@ regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT),
                ExtraTreesRegressor(n_estimators=100, criterion='mse', max_depth=5, 
                     min_samples_split=2, min_samples_leaf=1, max_features='log2', 
                     bootstrap=True, random_state=RANDOM_SEED),
-               BernoulliNB(alpha=1.0, binarize=0.0, fit_prior=True, class_prior=None)
+               BernoulliNB(alpha=1.0, binarize=0.0, fit_prior=True, class_prior=None),
+               LinearSVC(penalty='l2', loss='squared_hinge', dual=True, tol=0.0001, 
+                         C=1.0, multi_class='ovr', fit_intercept=True, intercept_scaling=1, 
+                         class_weight=None, verbose=0, random_state=None, max_iter=1000)
               ]
          
    
@@ -110,13 +115,13 @@ def plot_roc_curve(fpr, tpr, label=None):
     plt.xlabel('False Positive Rate', fontsize=16)
     plt.ylabel('True Positive Rate', fontsize=16)
 
-def eval_model(data, labels):   
+def eval_model(data, labels, oversample):   
 
     # array to hold results
     cross_val_res1 = np.zeros((N_FOLDS, len(reg_methods)))
     cross_val_res2 = np.zeros((N_FOLDS, len(reg_methods)))
     r2_val_res = np.zeros((N_FOLDS, len(reg_methods)))
-    exp_var_res = np.zeros((N_FOLDS, len(reg_methods)))
+
     
     # Ten-fold cross-validation with stratified sampling.
     stsp = StratifiedShuffleSplit(n_splits=N_FOLDS)
@@ -125,9 +130,13 @@ def eval_model(data, labels):
        X_train, X_test = data.iloc[train_index], data.iloc[test_index]
        y_train, y_test = labels.iloc[train_index], labels.iloc[test_index]
        
-       print ("\n\n***********************************************************************************\n") 
-       print ("*************************************** FOLD = {} **********************************\n".format (fold_index))
-       print ("************************************************************************************\n") 
+       if oversample == True:
+           sm = SMOTE(sampling_strategy='minority')
+           X_train, y_train = sm.fit_sample(X_train, y_train)
+       
+       print ("\n\n-----------------------------------------------------------------------------------\n") 
+       print ("--------------------------------------- FOLD = {} ----------------------------------\n".format (fold_index))
+       print ("\n\n-----------------------------------------------------------------------------------\n")  
          
        method_index = 0
        for model_name, method in zip(reg_methods, regress_list):
@@ -180,19 +189,11 @@ def eval_model(data, labels):
 # Run the build and evaluate model loop
 #**************************************************
 print ("\n\n\n************ PER FOLD REGRESSION RESULTS  ")
-orig_res = eval_model(train_data, target)
+orig_res = eval_model(train_data, target, False)
 orig_res.columns = ['MAE', 'RMSE', 'R2']
-sorted_res = orig_res.sort_values(by = 'MAE')
+sorted_res_1 = orig_res.sort_values(by = 'MAE')
 
 
-
-# Output results of cross-validation for comparison
-#--------------------------------------------------
-print ("\n\n\n************ AVERAGE OF REGRESSION RESULTS ACROSS ALL FOLDS ")
-print('Average results from ', N_FOLDS, '-fold cross-validation\n',
-      '\nMethod               Root mean-squared error', sep = '')     
-
-print("Method\n{0}".format(sorted_res))
 
 ########################################################################
 # get the feature importance for the model that did best
@@ -225,7 +226,41 @@ def get_importance(df, model_name):
 print ("\n\n\n************ FEATURE IMPORTANCE ***********************")
 
 # get model with lowest MAE and find feature importance
-candidate = sorted_res.index[0]
+candidate = sorted_res_1.index[0]
 get_importance(train, candidate)
 
 
+
+#*******************************************************
+# Run the build and evaluate model loop, regular samples
+#*******************************************************
+print ("\n\n\n**************************** REGULAR STRATEFIED RESULTS ****************************")
+print ("******************************************************************************\n ")
+print ("\n\n\n**************************** PER FOLD REGRESSION RESULTS ****************************\n")
+orig_res = eval_model(train_data, target, True)
+orig_res.columns = ['MAE', 'RMSE', 'R2']
+sorted_res_2 = orig_res.sort_values(by = 'MAE')
+
+
+
+# Output results of cross-validation for comparison
+#--------------------------------------------------
+print ("\n\n\n************ AVERAGE OF REGRESSION RESULTS ACROSS ALL FOLDS ")
+print('Average results from ', N_FOLDS, '-fold cross-validation\n', sep = '')     
+
+print("Method\n{0}".format(sorted_res_1))
+
+########################################################################
+# OK, let's look at the impact of over-sampling the people who leave
+# the R^2 is very low, and it would be good to see if there is something
+# we can do to improve the model
+########################################################################
+
+# Output results of oversampled cross-validation for comparison
+#--------------------------------------------------
+print ("\n\n\n**************************** OVERSAMPLED RESULTS ****************************")
+print ("******************************************************************************\n ")
+print ("\n\n\n************ AVERAGE OF REGRESSION RESULTS ACROSS ALL FOLDS ")
+print('Average results from ', N_FOLDS, '-fold cross-validation\n', sep = '')     
+
+print("Method\n{0}".format(sorted_res_2))
