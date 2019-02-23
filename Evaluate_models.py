@@ -18,13 +18,15 @@ import numpy as np
 
 from sklearn.linear_model import LogisticRegression, Ridge, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, BaggingRegressor,\
- AdaBoostRegressor, GradientBoostingRegressor, ExtraTreesRegressor
+    AdaBoostRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import BernoulliNB
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, roc_curve
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error,\
+    roc_curve, roc_auc_score
 from sklearn.model_selection import StratifiedShuffleSplit
 from imblearn.over_sampling import SMOTE
+from sklearn.exceptions import ConvergenceWarning
 
 
 from matplotlib import pyplot as plt
@@ -37,11 +39,13 @@ RANDOM_SEED = 13
 SET_FIT_INTERCEPT=True
 
 # set the number of folds for cross-validation
-N_FOLDS = 10
-#N_FOLDS = 1
+#N_FOLDS = 10
+N_FOLDS = 2
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning) 
+warnings.simplefilter(action='error', category=ConvergenceWarning) 
+
 
 pd.set_option('display.max_columns', 10)
 
@@ -68,7 +72,7 @@ reg_methods = ['LogisiticRegression', 'Ridge', 'Lasso',
           'RandomForest', 'AdaBoost','GradientBoosting 1.0','GradientBoosting .1', 
           'Extra Trees', 'BernoulliNB', 'SVM']
 
-regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT), 
+regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT),                
                Ridge(alpha = 1, solver = 'cholesky', 
                      fit_intercept = SET_FIT_INTERCEPT, 
                      normalize = False, 
@@ -121,7 +125,7 @@ def eval_model(data, labels, oversample):
     cross_val_res1 = np.zeros((N_FOLDS, len(reg_methods)))
     cross_val_res2 = np.zeros((N_FOLDS, len(reg_methods)))
     r2_val_res = np.zeros((N_FOLDS, len(reg_methods)))
-
+    auc_val_res = np.zeros((N_FOLDS, len(reg_methods)))
     
     # Ten-fold cross-validation with stratified sampling.
     stsp = StratifiedShuffleSplit(n_splits=N_FOLDS)
@@ -134,36 +138,46 @@ def eval_model(data, labels, oversample):
            sm = SMOTE(sampling_strategy='minority')
            X_train, y_train = sm.fit_sample(X_train, y_train)
        
-       print ("\n\n-----------------------------------------------------------------------------------\n") 
-       print ("--------------------------------------- FOLD = {} ----------------------------------\n".format (fold_index))
-       print ("\n\n-----------------------------------------------------------------------------------\n")  
+       print ("\n-----------------------------------------------------------------------------------") 
+       print ("--------------------------------------- FOLD = {} ----------------------------------".format (fold_index))
+       print ("-----------------------------------------------------------------------------------\n")  
          
        method_index = 0
        for model_name, method in zip(reg_methods, regress_list):
            print("\n\n\nRegression model evaluation for model:", model_name)
            print("Scikit_Learn method:", method)
-           method.fit(X_train,y_train)         
+           try:
+               method.fit(X_train,y_train)
+           except ConvergenceWarning:
+               print ('###########################################################################')  
+               print ('########################### Failed to converge  ###########################')  
+               print ('###########################################################################')  
+               method_index += 1      
+               break
            y_test_predict = method.predict(X_test)
-            
            r2_val = r2_score(y_test, y_test_predict) 
            print("R-squared is:", r2_val)
            fold_method_res1 = mean_absolute_error(y_test, y_test_predict)
            fold_method_res2 = np.sqrt(mean_squared_error(y_test, y_test_predict))
+           fold_method_auc = roc_auc_score(y_test, y_test_predict)
            print(method.get_params(deep=True))
            print('Mean absolute error:', fold_method_res1)
            print('Root mean-squared error:', fold_method_res2)
+           print("Area under the ROC :", fold_method_auc)
 
            cross_val_res1[fold_index, method_index] = fold_method_res1
            cross_val_res2[fold_index, method_index] = fold_method_res2
            r2_val_res[fold_index, method_index] = r2_val    
-          
+           auc_val_res[fold_index, method_index] = fold_method_auc
+            
            fpr, tpr, _ = roc_curve(y_test, y_test_predict)
            plt.figure(figsize=(8, 6))
            plt.title("ROC Curve")
            plot_roc_curve(fpr, tpr)
            plt.show()
-                        
+          
            method_index += 1
+
        fold_index += 1
        
 
@@ -175,12 +189,16 @@ def eval_model(data, labels, oversample):
     
     r2_val_res_df = pd.DataFrame(r2_val_res)
     r2_val_res_df.columns = reg_methods
-
-    res1=cross_val_res1_df.mean()
-    res2=cross_val_res2_df.mean()
-    r2=r2_val_res_df.mean()
     
-    tmp = pd.concat([res1, res2, r2], axis=1)   
+    auc_val_res_df = pd.DataFrame(auc_val_res)
+    auc_val_res_df.columns = reg_methods
+
+    res1 = cross_val_res1_df.mean()
+    res2 = cross_val_res2_df.mean()
+    r2 = r2_val_res_df.mean()
+    auc = auc_val_res_df.mean()
+    
+    tmp = pd.concat([res1, res2, r2, auc], axis=1)   
 
     return tmp
 
@@ -190,7 +208,7 @@ def eval_model(data, labels, oversample):
 #**************************************************
 print ("\n\n\n************ PER FOLD REGRESSION RESULTS  ")
 orig_res = eval_model(train_data, target, False)
-orig_res.columns = ['MAE', 'RMSE', 'R2']
+orig_res.columns = ['MAE', 'RMSE', 'R2', 'AUC']
 sorted_res_1 = orig_res.sort_values(by = 'MAE')
 
 
@@ -238,7 +256,7 @@ print ("\n\n\n**************************** REGULAR STRATEFIED RESULTS **********
 print ("******************************************************************************\n ")
 print ("\n\n\n**************************** PER FOLD REGRESSION RESULTS ****************************\n")
 orig_res = eval_model(train_data, target, True)
-orig_res.columns = ['MAE', 'RMSE', 'R2']
+orig_res.columns = ['MAE', 'RMSE', 'R2', 'AUC']
 sorted_res_2 = orig_res.sort_values(by = 'MAE')
 
 
@@ -260,7 +278,49 @@ print("Method\n{0}".format(sorted_res_1))
 #--------------------------------------------------
 print ("\n\n\n**************************** OVERSAMPLED RESULTS ****************************")
 print ("******************************************************************************\n ")
-print ("\n\n\n************ AVERAGE OF REGRESSION RESULTS ACROSS ALL FOLDS ")
+print ("\n************ AVERAGE OF REGRESSION RESULTS ACROSS ALL FOLDS ")
 print('Average results from ', N_FOLDS, '-fold cross-validation\n', sep = '')     
 
 print("Method\n{0}".format(sorted_res_2))
+
+
+
+
+print ("*******************************************************************************************\n ")
+print ("\n\n\n**************************** COMPARISON OF HYPER_PARAMETERS ****************************")
+print ("*******************************************************************************************\n ")
+print ("\n------------------------- PER FOLD REGRESSION RESULTS -------------------------\n")
+regress_list = [LogisticRegression(penalty='l1', dual=False, tol=0.0001, C=1.0, 
+                        fit_intercept=True, intercept_scaling=1, class_weight='balanced',
+                        random_state=RND_ST, solver='liblinear', max_iter=1000, 
+                        multi_class='auto', verbose=0, warm_start=False)]
+print ("\n\n\n!!!!!!!!!!!!!!!!!!!!!!! RESULTS Pen = L1, Solver = Liblinear !!!!!!!!!!!!!!!!!!!!!!!\n")
+orig_res = eval_model(train_data, target, True)
+orig_res.columns = ['MAE', 'RMSE', 'R2', 'AUC']
+sorted_res_2 = orig_res.sort_values(by = 'MAE')
+print('Average results from ', N_FOLDS, '-fold cross-validation\n', sep = '')     
+print("Method\n{0}".format(sorted_res_1.loc['LogisiticRegression']))
+
+
+regress_list = [LogisticRegression(penalty='l1', dual=False, tol=0.0001, C=1.0, 
+                        fit_intercept=True, intercept_scaling=1, class_weight= None,
+                        random_state=RND_ST, solver='saga', max_iter=500, 
+                        multi_class='auto', verbose=0, warm_start=False)]
+print ("\n\n\n!!!!!!!!!!!!!!!!!!!!!!! RESULTS Pen = L1, Solver = Saga !!!!!!!!!!!!!!!!!!!!!!!\n")
+orig_res = eval_model(train_data, target, True)
+orig_res.columns = ['MAE', 'RMSE', 'R2', 'AUC']
+sorted_res_2 = orig_res.sort_values(by = 'MAE')
+print('Average results from ', N_FOLDS, '-fold cross-validation\n', sep = '')     
+print("Method\n{0}".format(sorted_res_1.loc['LogisiticRegression']))
+regress_list = [LogisticRegression(penalty='l2', dual=False, tol=0.0001, C=1.0, 
+                        fit_intercept=True, intercept_scaling=1, class_weight=None,
+                        random_state=RND_ST, solver='newton-cg', max_iter=500, 
+                        multi_class='multinomial', verbose=0, warm_start=False)]
+print ("\n\n\n!!!!!!!!!!!!!!!!!!!!!!! RESULTS Pen = L2, Solver = newton-cg !!!!!!!!!!!!!!!!!!!!!!!\n")
+orig_res = eval_model(train_data, target, True)
+orig_res.columns = ['MAE', 'RMSE', 'R2', 'AUC']
+sorted_res_2 = orig_res.sort_values(by = 'MAE')
+print('Average results from ', N_FOLDS, '-fold cross-validation\n', sep = '')     
+print("Method\n{0}".format(sorted_res_1.loc['LogisiticRegression']))
+    
+
