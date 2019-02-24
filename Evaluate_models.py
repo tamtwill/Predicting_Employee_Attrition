@@ -153,7 +153,7 @@ def eval_model(data, labels, oversample):
                print ('########################### Failed to converge  ###########################')  
                print ('###########################################################################')  
                method_index += 1      
-               break
+               continue
            y_test_predict = method.predict(X_test)
            r2_val = r2_score(y_test, y_test_predict) 
            print("R-squared is:", r2_val)
