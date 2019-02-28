@@ -15,13 +15,12 @@ import pandas as pd
 import numpy as np
 
 
-from xgboost import XGBClassifier
-from sklearn.linear_model import LogisticRegression, RidgeClassification, Lasso, ElasticNet
+#from xgboost import XGBRegressor
+from sklearn.linear_model import LogisticRegression, Ridge, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, BaggingRegressor,\
     AdaBoostRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import BernoulliNB
+from sklearn.svm import LinearSVR
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error,\
     roc_curve, roc_auc_score
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -35,7 +34,7 @@ from matplotlib import pyplot as plt
 RND_ST = np.random.RandomState(31)
 
 # initialize various system variables
-RANDOM_SEED = 13
+RANDOM_SEED = 31
 SET_FIT_INTERCEPT=True
 
 # set the number of folds for cross-validation
@@ -69,13 +68,13 @@ target = train['has_quit']
 
 ## 
 
-reg_methods = ['LogisiticRegression', 'RidgeClassification', 'Lasso', 
+reg_methods = ['LogisiticRegression', 'Ridge', 'Lasso', 
           'ElasticNet', 'BaggingRegressor', 
           'RandomForest', 'AdaBoost','GradientBoosting 1.0','GradientBoosting .1', 
-          'Extra Trees', 'BernoulliNB', 'SVM', 'XGBClassifier']
+          'Extra Trees', 'BernoulliNB', 'SVM']
 
 regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT),                
-               RidgeClassification(alpha = 1, solver = 'cholesky', 
+               Ridge(alpha = 1, solver = 'cholesky', 
                      fit_intercept = SET_FIT_INTERCEPT, 
                      normalize = False, 
                      random_state = RANDOM_SEED),
@@ -98,14 +97,12 @@ regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT),
                     learning_rate=1.0, random_state=RANDOM_SEED, max_features='log2'),
                GradientBoostingRegressor(max_depth=5, n_estimators=100, 
                     learning_rate=0.1, random_state=RANDOM_SEED, max_features='log2'),
-               ExtraTreesRegressor(n_estimators=100, criterion='mse', max_depth=5, 
+               ExtraTreesRegressor(n_estimators=100, criterion='mae', max_depth=5, 
                     min_samples_split=2, min_samples_leaf=1, max_features='log2', 
                     bootstrap=True, random_state=RANDOM_SEED),
-               BernoulliNB(alpha=1.0, binarize=0.0, fit_prior=True, class_prior=None),
-               LinearSVC(penalty='l2', loss='squared_hinge', dual=True, tol=0.0001, 
-                         C=1.0, multi_class='ovr', fit_intercept=True, intercept_scaling=1, 
-                         class_weight=None, verbose=0, random_state=None, max_iter=1000),
-               XGBClassifier(objective="reg:logistic", random_state=RND_ST)
+               LinearSVR(epsilon=0, dual=True, tol=0.0001, 
+                         C=1.0, fit_intercept=True, intercept_scaling=1, 
+                         verbose=0, random_state=None, max_iter=1000)
                 ]
          
    
