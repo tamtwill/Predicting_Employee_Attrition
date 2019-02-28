@@ -15,8 +15,8 @@ import pandas as pd
 import numpy as np
 
 
-
-from sklearn.linear_model import LogisticRegression, Ridge, Lasso, ElasticNet
+from xgboost import XGBClassifier
+from sklearn.linear_model import LogisticRegression, RidgeClassification, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, BaggingRegressor,\
     AdaBoostRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.tree import DecisionTreeRegressor
@@ -67,13 +67,15 @@ target = train['has_quit']
 #--------------------------------------------------
 # Setup the list of models to look at, let's try a range
 
-reg_methods = ['LogisiticRegression', 'Ridge', 'Lasso', 
+## 
+
+reg_methods = ['LogisiticRegression', 'RidgeClassification', 'Lasso', 
           'ElasticNet', 'BaggingRegressor', 
           'RandomForest', 'AdaBoost','GradientBoosting 1.0','GradientBoosting .1', 
-          'Extra Trees', 'BernoulliNB', 'SVM']
+          'Extra Trees', 'BernoulliNB', 'SVM', 'XGBClassifier']
 
 regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT),                
-               Ridge(alpha = 1, solver = 'cholesky', 
+               RidgeClassification(alpha = 1, solver = 'cholesky', 
                      fit_intercept = SET_FIT_INTERCEPT, 
                      normalize = False, 
                      random_state = RANDOM_SEED),
@@ -102,8 +104,9 @@ regress_list = [LogisticRegression(fit_intercept = SET_FIT_INTERCEPT),
                BernoulliNB(alpha=1.0, binarize=0.0, fit_prior=True, class_prior=None),
                LinearSVC(penalty='l2', loss='squared_hinge', dual=True, tol=0.0001, 
                          C=1.0, multi_class='ovr', fit_intercept=True, intercept_scaling=1, 
-                         class_weight=None, verbose=0, random_state=None, max_iter=1000)
-              ]
+                         class_weight=None, verbose=0, random_state=None, max_iter=1000),
+               XGBClassifier(objective="reg:logistic", random_state=RND_ST)
+                ]
          
    
 
