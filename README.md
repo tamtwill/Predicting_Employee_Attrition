@@ -14,3 +14,5 @@ The project breakdown is:
 3) Attrition_models.py - TBD 
   * Explanatory_Models.ipynb - TBD once I have the models built
 4) Report_WrapUp - TBD.  I plan to write-up the results of this analysis, just as I'd have to do if this were an actual task at work.
+
+#### Note to self: add clustering, I think that would be interesting to explore for this dataset
