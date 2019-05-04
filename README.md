@@ -1,4 +1,4 @@
-# NOTE: This project is a work in progress, it is far from complete.
+# NOTE: This project is a work in progress.
 ## Predicting Employee Attrition
 
 As a former manager, I am inherently interested in personnel questions.  One of the big ones has always been: can you predict who is going to leave?  I came across this attrition dataset kindly provided to the data science community by IBM.  This project is my personal look at the data, along with model building to predict who might be an attrition risk.
@@ -15,4 +15,4 @@ The project breakdown is:
   * Explanatory_Models.ipynb - TBD once I have the models built
 4) Report_WrapUp - TBD.  I plan to write-up the results of this analysis, just as I'd have to do if this were an actual task at work.
 
-#### Note to self: add clustering, I think that would be interesting to explore for this dataset
+#### Next Steps: add clustering and do a segmentation analysis for the employees
